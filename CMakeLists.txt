@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 project(cuda-jit-ptx)
 
-
 if (DEFINED ENV{CUDA_HOME})
   set(CUDA_HOME "$ENV{CUDA_HOME}")
   set(CUDA_HOME "$ENV{CUDA_HOME}" CACHE PATH "Path to CUDA Toolkit.")
@@ -26,9 +25,14 @@ message(STATUS "Using CUDA_HOME: ${CUDA_HOME}")
 # LLVM
 if(DEFINED ENV{LLVM_HOME})
   set(LLVM_HOME "$ENV{LLVM_HOME}")
-  set(LLVM_HOME "${LLVM_HOME}" CACHE PATH "Path to LLVM 3.2.")
+  set(LLVM_HOME "${LLVM_HOME}" CACHE PATH "Path to LLVM")
 else()
-  set(LLVM_HOME "" CACHE PATH "Path to LLVM 3.2.")  
+  find_program(LLVM llc)
+  if (NOT LLVM)
+    message(FATAL_ERROR "LLVM_HOME not set, and could not find llc in "
+                        "your PATH. ")
+  endif()
+  set(LLVM_HOME "" CACHE PATH "Path to LLVM")  
 endif()
 message(STATUS "Using LLVM_HOME: ${LLVM_HOME}")
 
@@ -52,32 +56,8 @@ if (NOT NVCC)
 endif()
 message(STATUS "Using nvcc: ${NVCC}")
 
-
-### Find LLVM
-# LLVM is a bit tricky if we don't assume a CMake-based build
-find_file(ADDLLVM_CMAKE AddLLVM.cmake PATHS "${LLVM_HOME}/share/llvm/cmake")
-if(ADDLLVM_CMAKE)
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_HOME}/share/llvm/cmake")
-  include(AddLLVM)
-  include("${LLVM_HOME}/share/llvm/cmake/LLVMConfig.cmake")
-  include(HandleLLVMOptions)
-  include_directories("${LLVM_HOME}/include")
-  link_directories("${LLVM_HOME}/lib")
-  if (NOT LLVM_VERSION_MAJOR STREQUAL "3" OR NOT LLVM_VERSION_MINOR STREQUAL "2")
-    message(STATUS "LLVM found, but version 3.2 is required.")
-    message(STATUS "cuda-c-linking sample will not be built!")
-  else()
-    set(HAVE_LLVM YES)
-    message(STATUS "Using LLVM install from ${LLVM_HOME}")
-  endif()
-else()
-  message(STATUS "CMake-based LLVM install could not be found.")
-  message(STATUS "cuda-c-linking sample will not be built!")
-endif()
-
-
 ### Include common headers
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
-### Samples
+### Src
 add_subdirectory(src)
