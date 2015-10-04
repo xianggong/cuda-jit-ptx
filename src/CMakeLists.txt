@@ -1,6 +1,7 @@
 set( FOLDER_NAME src )
 set( SUBDIRECTORIES 
-  0_sample
+  sample
+  inst_sched_0 
 )
 
 set(CMAKE_SUPPRESS_REGENERATION TRUE)
