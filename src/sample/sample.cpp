@@ -3,19 +3,16 @@
 #include <cassert>
 #include "cuda.h"
 
-
-void checkCudaErrors(CUresult err) {
-  assert(err == CUDA_SUCCESS);
-}
+void checkCudaErrors(CUresult err) { assert(err == CUDA_SUCCESS); }
 
 /// main - Program entry point
-int main(int argc, char **argv) {
-  CUdevice    device;
-  CUmodule    cudaModule;
-  CUcontext   context;
-  CUfunction  function;
+int main(int argc, char** argv) {
+  CUdevice device;
+  CUmodule cudaModule;
+  CUcontext context;
+  CUfunction function;
   CUlinkState linker;
-  int         devCount;
+  int devCount;
 
   // CUDA initialization
   checkCudaErrors(cuInit(0));
@@ -28,8 +25,8 @@ int main(int argc, char **argv) {
 
   int devMajor, devMinor;
   checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
-  std::cout << "Device Compute Capability: "
-            << devMajor << "." << devMinor << "\n";
+  std::cout << "Device Compute Capability: " << devMajor << "." << devMinor
+            << "\n";
   if (devMajor < 2) {
     std::cerr << "ERROR: Device 0 is not SM 2.0 or greater\n";
     return 1;
@@ -41,7 +38,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   std::string str((std::istreambuf_iterator<char>(t)),
-                    std::istreambuf_iterator<char>());
+                  std::istreambuf_iterator<char>());
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
@@ -57,9 +54,9 @@ int main(int argc, char **argv) {
   CUdeviceptr devBufferB;
   CUdeviceptr devBufferC;
 
-  checkCudaErrors(cuMemAlloc(&devBufferA, sizeof(float)*16));
-  checkCudaErrors(cuMemAlloc(&devBufferB, sizeof(float)*16));
-  checkCudaErrors(cuMemAlloc(&devBufferC, sizeof(float)*16));
+  checkCudaErrors(cuMemAlloc(&devBufferA, sizeof(float) * 16));
+  checkCudaErrors(cuMemAlloc(&devBufferB, sizeof(float) * 16));
+  checkCudaErrors(cuMemAlloc(&devBufferC, sizeof(float) * 16));
 
   float* hostA = new float[16];
   float* hostB = new float[16];
@@ -68,45 +65,42 @@ int main(int argc, char **argv) {
   // Populate input
   for (unsigned i = 0; i != 16; ++i) {
     hostA[i] = (float)i;
-    hostB[i] = (float)(2*i);
+    hostB[i] = (float)(2 * i);
     hostC[i] = 0.0f;
   }
 
-  checkCudaErrors(cuMemcpyHtoD(devBufferA, &hostA[0], sizeof(float)*16));
-  checkCudaErrors(cuMemcpyHtoD(devBufferB, &hostB[0], sizeof(float)*16));
-
+  checkCudaErrors(cuMemcpyHtoD(devBufferA, &hostA[0], sizeof(float) * 16));
+  checkCudaErrors(cuMemcpyHtoD(devBufferB, &hostB[0], sizeof(float) * 16));
 
   unsigned blockSizeX = 16;
   unsigned blockSizeY = 1;
   unsigned blockSizeZ = 1;
-  unsigned gridSizeX  = 1;
-  unsigned gridSizeY  = 1;
-  unsigned gridSizeZ  = 1;
+  unsigned gridSizeX = 1;
+  unsigned gridSizeY = 1;
+  unsigned gridSizeZ = 1;
 
   // Kernel parameters
-  void *KernelParams[] = { &devBufferA, &devBufferB, &devBufferC };
+  void* KernelParams[] = {&devBufferA, &devBufferB, &devBufferC};
 
   std::cout << "Launching kernel\n";
 
   // Kernel launch
   checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
-                                 blockSizeX, blockSizeY, blockSizeZ,
-                                 0, NULL, KernelParams, NULL));
+                                 blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
+                                 KernelParams, NULL));
 
   // Retrieve device data
-  checkCudaErrors(cuMemcpyDtoH(&hostC[0], devBufferC, sizeof(float)*16));
-
+  checkCudaErrors(cuMemcpyDtoH(&hostC[0], devBufferC, sizeof(float) * 16));
 
   std::cout << "Results:\n";
   for (unsigned i = 0; i != 16; ++i) {
     std::cout << hostA[i] << " + " << hostB[i] << " = " << hostC[i] << "\n";
   }
 
-
   // Clean up after ourselves
-  delete [] hostA;
-  delete [] hostB;
-  delete [] hostC;
+  delete[] hostA;
+  delete[] hostB;
+  delete[] hostC;
 
   // Clean-up
   checkCudaErrors(cuMemFree(devBufferA));
