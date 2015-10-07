@@ -6,7 +6,10 @@ add_custom_target(
 	${EXE_NAME}_IR
 	COMMAND "${CMAKE_COMMAND}" -E chdir
         "${CMAKE_CURRENT_SOURCE_DIR}" 
-	llc -mcpu=sm_20 kernel.ll -o kernel.ptx
+	llc -mcpu=sm_20 kernel0.ll -o kernel0.ptx
+	COMMAND "${CMAKE_COMMAND}" -E chdir
+        "${CMAKE_CURRENT_SOURCE_DIR}" 
+	llc -mcpu=sm_20 kernel1.ll -o kernel1.ptx
 	COMMENT "Using llc to generate kernel ptx from LLVM IR"
 	WORKING_DIRECTORY .
 	VERBATIM
@@ -21,7 +24,11 @@ add_dependencies(${EXE_NAME} ${EXE_NAME}_IR)
 add_custom_command(
 	TARGET ${EXE_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-	${CMAKE_CURRENT_SOURCE_DIR}/kernel.ptx ./
+	${CMAKE_CURRENT_SOURCE_DIR}/kernel0.ptx ./
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+	${CMAKE_CURRENT_SOURCE_DIR}/kernel1.ptx ./
 	COMMAND ${CMAKE_COMMAND} -E remove 
-	${CMAKE_CURRENT_SOURCE_DIR}/kernel.ptx
+	${CMAKE_CURRENT_SOURCE_DIR}/kernel0.ptx
+	COMMAND ${CMAKE_COMMAND} -E remove 
+	${CMAKE_CURRENT_SOURCE_DIR}/kernel1.ptx
 ) 
