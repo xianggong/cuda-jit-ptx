@@ -14,7 +14,7 @@ add_custom_target(
 
 # Generate host program
 add_executable(${EXE_NAME} ${SRC_FILES})
-target_link_libraries(${EXE_NAME} cuda)
+target_link_libraries(${EXE_NAME} cuda cudart)
 add_dependencies(${EXE_NAME} ${EXE_NAME}_IR)
 
 # Move PTX file to binary directory
