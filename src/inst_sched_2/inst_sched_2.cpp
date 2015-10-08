@@ -10,7 +10,7 @@ void checkCudaErrors(cudaError err) { assert(err == cudaSuccess); }
 /// main - Program entry point
 int main(int argc, char** argv) {
   if (argc != 3) {
-    printf("Usage: %s dataCount blockSize gridSize\n", argv[0]);
+    printf("Usage: %s dataCount blockSize\n", argv[0]);
     exit(1);
   }
 
