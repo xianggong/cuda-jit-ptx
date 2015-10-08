@@ -7,6 +7,11 @@ inline void checkCudaErrors(CUresult err) { assert(err == CUDA_SUCCESS); }
 
 /// main - Program entry point
 int main(int argc, char** argv) {
+  if(argc != 3) {
+    printf("Usage: %s dataCount blockSize\n", argv[0]);
+    exit(1);
+  }
+
   CUdevice device;
   CUmodule cudaModule;
   CUcontext context;
@@ -84,7 +89,7 @@ int main(int argc, char** argv) {
   unsigned blockSizeX = atoi(argv[2]);
   unsigned blockSizeY = 1;
   unsigned blockSizeZ = 1;
-  unsigned gridSizeX = atoi(argv[3]);
+  unsigned gridSizeX = (dataCount + blockSizeX - 1) / blockSizeX;
   unsigned gridSizeY = 1;
   unsigned gridSizeZ = 1;
 
