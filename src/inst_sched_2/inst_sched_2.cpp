@@ -9,8 +9,8 @@ void checkCudaErrors(cudaError err) { assert(err == cudaSuccess); }
 
 /// main - Program entry point
 int main(int argc, char** argv) {
-  if (argc != 3) {
-    printf("Usage: %s dataCount blockSize\n", argv[0]);
+  if (argc != 4) {
+    printf("Usage: %s dataCount blockSize mode[0/1/2]\n", argv[0]);
     exit(1);
   }
 
@@ -41,17 +41,41 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::ifstream t0("kernel0.ptx");
+  std::ifstream t0;
+  std::ifstream t1;
+
+  unsigned kernelMode = atoi(argv[3]);
+  switch (kernelMode) {
+    case 0: {
+      t0.open("kernel0.ptx", std::ifstream::in);
+      t1.open("kernel0.ptx", std::ifstream::in);
+      break;
+    }
+    case 1: {
+      t0.open("kernel1.ptx", std::ifstream::in);
+      t1.open("kernel1.ptx", std::ifstream::in);
+      break;
+    }
+    case 2: {
+      t0.open("kernel0.ptx", std::ifstream::in);
+      t1.open("kernel1.ptx", std::ifstream::in);
+      break;
+    }
+    default: {
+      std::cerr << "Invalid mode: " << kernelMode << std::endl;
+      exit(1);
+    }
+  }
+
   if (!t0.is_open()) {
-    std::cerr << "kernel0.ptx not found\n";
+    std::cerr << "ptx file for kernel 0 not found\n";
     return 1;
   }
   std::string str0((std::istreambuf_iterator<char>(t0)),
                    std::istreambuf_iterator<char>());
 
-  std::ifstream t1("kernel1.ptx");
   if (!t1.is_open()) {
-    std::cerr << "kernel1.ptx not found\n";
+    std::cerr << "ptx file for kernel 1 not found\n";
     return 1;
   }
   std::string str1((std::istreambuf_iterator<char>(t1)),
@@ -134,14 +158,14 @@ int main(int argc, char** argv) {
 
   // Data to GPU
   checkCudaResults(cuMemcpyHtoDAsync(devBufferA0, &hostA0[0],
-                                    sizeof(float) * dataCount, strm0));
+                                     sizeof(float) * dataCount, strm0));
   checkCudaResults(cuMemcpyHtoDAsync(devBufferB0, &hostB0[0],
-                                    sizeof(float) * dataCount, strm0));
+                                     sizeof(float) * dataCount, strm0));
 
   checkCudaResults(cuMemcpyHtoDAsync(devBufferA1, &hostA1[0],
-                                    sizeof(float) * dataCount, strm1));
+                                     sizeof(float) * dataCount, strm1));
   checkCudaResults(cuMemcpyHtoDAsync(devBufferB1, &hostB1[0],
-                                    sizeof(float) * dataCount, strm1));
+                                     sizeof(float) * dataCount, strm1));
 
   unsigned blockSizeX = atoi(argv[2]);
   unsigned blockSizeY = 1;
@@ -160,11 +184,11 @@ int main(int argc, char** argv) {
 
   // Kernel launch
   checkCudaResults(cuLaunchKernel(function0, gridSizeX, gridSizeY, gridSizeZ,
-                                 blockSizeX, blockSizeY, blockSizeZ, 0, strm0,
-                                 Kernel0Params, NULL));
+                                  blockSizeX, blockSizeY, blockSizeZ, 0, strm0,
+                                  Kernel0Params, NULL));
   checkCudaResults(cuLaunchKernel(function1, gridSizeX, gridSizeY, gridSizeZ,
-                                 blockSizeX, blockSizeY, blockSizeZ, 0, strm1,
-                                 Kernel1Params, NULL));
+                                  blockSizeX, blockSizeY, blockSizeZ, 0, strm1,
+                                  Kernel1Params, NULL));
 
   // Sync Stream
   cudaStreamSynchronize(strm0);
@@ -172,13 +196,13 @@ int main(int argc, char** argv) {
 
   // Retrieve device data
   checkCudaResults(cuMemcpyDtoHAsync(&hostC0[0], devBufferC0,
-                                    sizeof(float) * dataCount, strm0));
+                                     sizeof(float) * dataCount, strm0));
   checkCudaResults(cuMemcpyDtoHAsync(&hostSMid0[0], devBufferSMid0,
-                                    sizeof(int) * dataCount, strm0));
+                                     sizeof(int) * dataCount, strm0));
   checkCudaResults(cuMemcpyDtoHAsync(&hostC1[0], devBufferC1,
-                                    sizeof(float) * dataCount, strm1));
+                                     sizeof(float) * dataCount, strm1));
   checkCudaResults(cuMemcpyDtoHAsync(&hostSMid1[0], devBufferSMid1,
-                                    sizeof(int) * dataCount, strm1));
+                                     sizeof(int) * dataCount, strm1));
 
   std::cout << "Kernel 0 results:\n";
   std::cout << "SM " << hostSMid0[0] << ":" << hostA0[0] << " + " << hostB0[0]
