@@ -25,7 +25,7 @@ add_custom_command(
 add_custom_command(
 	TARGET ${EXE_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E chdir ./ 
-	ptxas -arch=sm_20 kernel.ptx -o kernel.o
+	${PTXAS_BIN} -arch=sm_20 kernel.ptx -o kernel.o
 	COMMENT "Generating kernel Obj files..."
 )
 
@@ -33,6 +33,6 @@ add_custom_command(
 add_custom_command(
 	TARGET ${EXE_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E chdir ./ 
-	cuobjdump --dump-sass kernel.o > kernel.asm
+	${CUOBJDUMP_BIN} --dump-sass kernel.o > kernel.asm
 	COMMENT "Generating kernel Asm files..."
 )
