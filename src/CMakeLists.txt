@@ -4,6 +4,7 @@ set( SUBDIRECTORIES
   inst_sched_1 
   inst_sched_2 
   inst_sched_3 
+  inst_sched_4 
   sample
   special_registers
 )
