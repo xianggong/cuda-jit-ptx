@@ -12,5 +12,4 @@ It contains several micro benchmarks based on vector add
   Vector add, 3 kernels included. 1 command queue,
   kernels take different branch path based on SM id.
 5. inst_sched_4
-  Vector add, 3 kernels included. Enhanced version
-  in terms of data size
+  Vector add, 3 kernels included. Loop no longer hard-coded.

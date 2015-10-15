@@ -8,7 +8,7 @@ inline void checkCudaErrors(CUresult err) { assert(err == CUDA_SUCCESS); }
 /// main - Program entry point
 int main(int argc, char** argv) {
   if (argc != 5) {
-    printf("Usage: %s loopCount dataCount blockSize kernel\n", argv[0]);
+    printf("Usage: %s dataCount dataCountScale blockSize kernelName\n", argv[0]);
     exit(1);
   }
 
@@ -59,50 +59,53 @@ int main(int argc, char** argv) {
   CUdeviceptr devBufferB;
   CUdeviceptr devBufferC;
   CUdeviceptr devBufferSMid;
-  CUdeviceptr devBufferLoopCount;
+  CUdeviceptr devBufferDataCount;
 
   // Size
-  unsigned loopCount = atoi(argv[1]);
-  unsigned dataCount = atoi(argv[2]);
+  unsigned dataCountOrig = atoi(argv[1]);
+  unsigned dataCountScale = atoi(argv[2]);
+  unsigned dataCount = dataCountOrig * dataCountScale;
 
   checkCudaErrors(cuMemAlloc(&devBufferA, sizeof(float) * dataCount));
   checkCudaErrors(cuMemAlloc(&devBufferB, sizeof(float) * dataCount));
   checkCudaErrors(cuMemAlloc(&devBufferC, sizeof(float) * dataCount));
   checkCudaErrors(cuMemAlloc(&devBufferSMid, sizeof(int) * dataCount));
-  checkCudaErrors(cuMemAlloc(&devBufferLoopCount, sizeof(int)));
+  checkCudaErrors(cuMemAlloc(&devBufferDataCount, sizeof(int)));
 
   float* hostA = new float[dataCount];
   float* hostB = new float[dataCount];
   float* hostC = new float[dataCount];
   int* hostSMid = new int[dataCount];
-  int* hostLoopCount = new int[1];
+  int* hostDataCount = new int[1];
 
   // Populate input
   for (unsigned i = 0; i != dataCount; ++i) {
     hostA[i] = (float)i;
-    hostB[i] = (float)(2 * i);
-    hostC[i] = 2.0f;
+    hostB[i] = (float)i;
+    hostC[i] = 1.0f;
     hostSMid[i] = 0;
   }
-  hostLoopCount[0] = loopCount;
+  hostDataCount[0] = dataCount;
 
   checkCudaErrors(
       cuMemcpyHtoD(devBufferA, &hostA[0], sizeof(float) * dataCount));
   checkCudaErrors(
       cuMemcpyHtoD(devBufferB, &hostB[0], sizeof(float) * dataCount));
   checkCudaErrors(
-      cuMemcpyHtoD(devBufferLoopCount, &hostLoopCount[0], sizeof(int)));
+      cuMemcpyHtoD(devBufferC, &hostC[0], sizeof(float) * dataCount));
+  checkCudaErrors(
+      cuMemcpyHtoD(devBufferDataCount, &hostDataCount[0], sizeof(int)));
 
   unsigned blockSizeX = atoi(argv[3]);
   unsigned blockSizeY = 1;
   unsigned blockSizeZ = 1;
-  unsigned gridSizeX = (dataCount + blockSizeX - 1) / blockSizeX;
+  unsigned gridSizeX = (dataCountOrig + blockSizeX - 1) / blockSizeX;
   unsigned gridSizeY = 1;
   unsigned gridSizeZ = 1;
 
   // Kernel parameters
   void* KernelParams[] = {&devBufferA,    &devBufferB,        &devBufferC,
-                          &devBufferSMid, &devBufferLoopCount};
+                          &devBufferSMid, &devBufferDataCount};
 
   std::cout << "Launching kernel\n";
 
@@ -120,7 +123,7 @@ int main(int argc, char** argv) {
   std::cout << "Results:\n";
   std::cout << "SM " << hostSMid[0] << ":" << hostA[0] << " + " << hostB[0]
             << " = " << hostC[0] << "\n";
-  for (unsigned i = 1; i != dataCount; i++) {
+  for (unsigned i = 1; i != dataCountOrig; i++) {
     if (hostSMid[i] != hostSMid[i - 1])
       std::cout << "SM " << hostSMid[i] << ":" << hostA[i] << " + " << hostB[i]
                 << " = " << hostC[i] << "\n";
@@ -131,14 +134,14 @@ int main(int argc, char** argv) {
   delete[] hostB;
   delete[] hostC;
   delete[] hostSMid;
-  delete[] hostLoopCount;
+  delete[] hostDataCount;
 
   // Clean-up
   checkCudaErrors(cuMemFree(devBufferA));
   checkCudaErrors(cuMemFree(devBufferB));
   checkCudaErrors(cuMemFree(devBufferC));
   checkCudaErrors(cuMemFree(devBufferSMid));
-  checkCudaErrors(cuMemFree(devBufferLoopCount));
+  checkCudaErrors(cuMemFree(devBufferDataCount));
   checkCudaErrors(cuModuleUnload(cudaModule));
   checkCudaErrors(cuCtxDestroy(context));
 
