@@ -1,9 +1,11 @@
 set ( EXE_NAME inst_sched_6)
 set ( SRC_FILES inst_sched_6.cpp )
+set ( RUN_SCRIPT run.sh )
 set ( EXTRA_CLEAN_FILES 
 	kernel0.ptx kernel0.o kernel0.asm 
 	kernel1.ptx kernel1.o kernel1.asm 
-	kernel2.ptx kernel2.o kernel2.asm)
+	kernel2.ptx kernel2.o kernel2.asm
+	${RUN_SCRIPT})
 
 # Extra files for make clean. Dont forget "", otherwise won't work
 set_directory_properties (
@@ -15,13 +17,22 @@ set_directory_properties (
 add_executable(${EXE_NAME} ${SRC_FILES})
 target_link_libraries(${EXE_NAME} cuda)
 
+# Copy run script
+add_custom_command(
+	TARGET ${EXE_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E chdir ./
+	cp ${CMAKE_CURRENT_SOURCE_DIR}/${RUN_SCRIPT} ./ 
+	COMMENT "Copying run srcipt"
+)
+
 # Generate LLVM IR file based on user input
 add_custom_command(
 	TARGET ${EXE_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}
 	python ./gen_kernel.py
-	COMMENT "Generating kernel IR files..."
+	COMMENT "Generating kernel IR files... \nEnter ALU len and Mem distance:"
 )
+
 # Generate PTX file to binary directory
 add_custom_command(
 	TARGET ${EXE_NAME} POST_BUILD
