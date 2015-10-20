@@ -1,16 +1,16 @@
 language: cpp
 compiler: 
-	- g++
+  - g++
 
 before_install:
-	- wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_7.5-18_amd64.deb
-	- sudo dpkg -i cuda-repo-ubuntu1404_7.5-18_amd64.deb
-	- sudo apt-get update
-	- sudo apt-get install cuda-7-5
-	- sudo apt-get install llvm
+  - wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_7.5-18_amd64.deb
+  - sudo dpkg -i cuda-repo-ubuntu1404_7.5-18_amd64.deb
+  - sudo apt-get update
+  -  sudo apt-get install cuda-7-5
+  - sudo apt-get install llvm
 
 install:
-	- mkdir build
-	- cd build
-	- cmake ../ 
-	- make
+ - mkdir build
+ - cd build
+ - cmake ../ 
+ - make
