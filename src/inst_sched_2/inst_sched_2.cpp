@@ -175,10 +175,10 @@ int main(int argc, char** argv) {
   unsigned gridSizeZ = 1;
 
   // Kernel parameters
-  void* Kernel0Params[] = {&devBufferA0, &devBufferB0,
-                           &devBufferC0, &devBufferSMid0};
-  void* Kernel1Params[] = {&devBufferA1, &devBufferB1,
-                           &devBufferC1, &devBufferSMid1};
+  void* Kernel0Params[] = {&devBufferA0, &devBufferB0, &devBufferC0,
+                           &devBufferSMid0};
+  void* Kernel1Params[] = {&devBufferA1, &devBufferB1, &devBufferC1,
+                           &devBufferSMid1};
 
   std::cout << "Launching kernel\n";
 

@@ -8,7 +8,8 @@ inline void checkCudaErrors(CUresult err) { assert(err == CUDA_SUCCESS); }
 /// main - Program entry point
 int main(int argc, char** argv) {
   if (argc != 6) {
-    printf("Usage: %s dataCount dataCountScale offset blockSize kernelName\n", argv[0]);
+    printf("Usage: %s dataCount dataCountScale offset blockSize kernelName\n",
+           argv[0]);
     exit(1);
   }
 
@@ -99,8 +100,7 @@ int main(int argc, char** argv) {
       cuMemcpyHtoD(devBufferC, &hostC[0], sizeof(float) * dataCount));
   checkCudaErrors(
       cuMemcpyHtoD(devBufferDataCount, &hostDataCount[0], sizeof(int)));
-  checkCudaErrors(
-      cuMemcpyHtoD(devBufferOffset, &hostOffset[0], sizeof(int)));
+  checkCudaErrors(cuMemcpyHtoD(devBufferOffset, &hostOffset[0], sizeof(int)));
 
   unsigned blockSizeX = atoi(argv[4]);
   unsigned blockSizeY = 1;
@@ -110,8 +110,9 @@ int main(int argc, char** argv) {
   unsigned gridSizeZ = 1;
 
   // Kernel parameters
-  void* KernelParams[] = {&devBufferA,    &devBufferB,        &devBufferC,
-                          &devBufferSMid, &devBufferDataCount, &devBufferOffset};
+  void* KernelParams[] = {&devBufferA,         &devBufferB,
+                          &devBufferC,         &devBufferSMid,
+                          &devBufferDataCount, &devBufferOffset};
 
   std::cout << "Launching kernel\n";
 

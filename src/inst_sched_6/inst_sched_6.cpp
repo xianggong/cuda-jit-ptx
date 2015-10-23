@@ -8,7 +8,8 @@ inline void checkCudaErrors(CUresult err) { assert(err == CUDA_SUCCESS); }
 /// main - Program entry point
 int main(int argc, char** argv) {
   if (argc != 5) {
-    printf("Usage: %s dataCount dataCountScale blockSize kernelName\n", argv[0]);
+    printf("Usage: %s dataCount dataCountScale blockSize kernelName\n",
+           argv[0]);
     exit(1);
   }
 
@@ -104,8 +105,8 @@ int main(int argc, char** argv) {
   unsigned gridSizeZ = 1;
 
   // Kernel parameters
-  void* KernelParams[] = {&devBufferA,    &devBufferB,        &devBufferC,
-                          &devBufferSMid, &devBufferDataCount};
+  void* KernelParams[] = {&devBufferA, &devBufferB, &devBufferC, &devBufferSMid,
+                          &devBufferDataCount};
 
   std::cout << "Launching kernel\n";
 

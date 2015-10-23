@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
   unsigned gridSizeZ = 1;
 
   // Kernel parameters
-  void* KernelParams[] = {&devBufferA,    &devBufferB,        &devBufferC,
-                          &devBufferSMid, &devBufferLoopCount};
+  void* KernelParams[] = {&devBufferA, &devBufferB, &devBufferC, &devBufferSMid,
+                          &devBufferLoopCount};
 
   std::cout << "Launching kernel\n";
 
