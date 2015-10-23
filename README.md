@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/xianggong/cuda-jit-ptx.svg?branch=master)](https://travis-ci.org/xianggong/cuda-jit-ptx)
-
 It contains several micro benchmarks based on vector add
 
 0. sample 
