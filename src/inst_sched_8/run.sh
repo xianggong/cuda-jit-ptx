@@ -21,9 +21,24 @@ fi
 genFile () {
   for((aluDist=1;aluDist<=$maxAluDistance;aluDist+=1))
   do
-    for((memDist=1;memDist<=$maxMemDistance;memDist+=1))
+    memDistMax=$([${maxMemDistance} -le ${aluDist}] && echo "$maxMemDistance" || echo "$aluDist")
+    echo "max $memDistMax"
+    for((memDist=1;memDist<=${memDistMax};memDist+=1))
     do
+      # Generate ll kernels
       python gen_kernel.py $aluDist $memDist
+      # Generate ptx kernels
+      llc -mcpu=sm_20 kernel0_${aluDist}_${memDist}.ll -o kernel0_${aluDist}_${memDist}.ptx
+      llc -mcpu=sm_20 kernel1_${aluDist}_${memDist}.ll -o kernel1_${aluDist}_${memDist}.ptx
+      llc -mcpu=sm_20 kernel2_${aluDist}_${memDist}.ll -o kernel2_${aluDist}_${memDist}.ptx
+      # Generate kernel objects
+      ptxas -arch=sm_20 kernel0_${aluDist}_${memDist}.ptx -o kernel0_${aluDist}_${memDist}.o
+      ptxas -arch=sm_20 kernel1_${aluDist}_${memDist}.ptx -o kernel1_${aluDist}_${memDist}.o
+      ptxas -arch=sm_20 kernel2_${aluDist}_${memDist}.ptx -o kernel2_${aluDist}_${memDist}.o
+      # Generate asm kernels
+      cuobjdump --dump-sass kernel0_${aluDist}_${memDist}.o > kernel0_${aluDist}_${memDist}.asm
+      cuobjdump --dump-sass kernel1_${aluDist}_${memDist}.o > kernel1_${aluDist}_${memDist}.asm
+      cuobjdump --dump-sass kernel2_${aluDist}_${memDist}.o > kernel2_${aluDist}_${memDist}.asm
     done
   done
 }
@@ -32,6 +47,7 @@ genFile () {
 profile () {
   aluDist=$1
   memDist=$2
+  echo "profile $aluDist $memDist"
   for ((blockSize=32;blockSize<=1024;blockSize*=2))
   do
     maxScale=$((1024*32760/${blockSize}))

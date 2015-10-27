@@ -23,7 +23,7 @@ class genKernel(object):
         src += "  %k" + str(kernelIdx) + ".alu." + \
             bufName + ".0 = fdiv float %k"
         src += str(kernelIdx) + ".val" + bufName + ", 1.0\n"
-        for i in range(self.aluWindowSize):
+        for i in range(self.aluWindowSize - 2):
             src += "  %k" + str(kernelIdx) + ".alu." + \
                 bufName + "." + str(i + 1)
             src += " = fdiv float %k" + str(kernelIdx) + ".alu." + bufName
@@ -31,7 +31,7 @@ class genKernel(object):
         src += "  %k" + str(kernelIdx) + ".alu." + \
             bufName + ".last = fdiv float %k"
         src += str(kernelIdx) + ".alu." + bufName + "." + \
-            str(self.aluWindowSize) + ", 1.0\n"
+            str(self.aluWindowSize - 2) + ", 1.0\n"
         src += "\n"
         return src
 
@@ -58,19 +58,23 @@ class genKernel(object):
             aluSrc += self.genALU(kernelIdx, "B")
             aluSrc += self.genALU(kernelIdx, "C")
             aluSrcLine = aluSrc.splitlines(True)
-            count = 0
+            count = 1
             if kernelIdx == 1:
-                count -= memDistance / 2
+                count += self.memDistance + 1
+            print aluSrc
             for line in aluSrcLine:
                 src += line
-                if count % memDistance == 0:
-                    if count / memDistance == 1:
+                print str(count) + line 
+                if count % self.aluWindowSize == 0:
+                    print count
+                    if count / self.aluWindowSize == 1:
                         src += "\n"
                         src += self.genRead(kernelIdx, "B")
-                    if count / memDistance == 2:
+                    if count / self.aluWindowSize == 2:
                         src += "\n"
                         src += self.genRead(kernelIdx, "C")
-                count += 1
+		if "%" in str(line):
+	                count += 1
         else:
             print("Error mode")
         return src
@@ -95,8 +99,10 @@ class genKernel(object):
 if __name__ == "__main__":
     aluWindowSize = int(sys.argv[1])
     memDistance = int(sys.argv[2])
-    if aluWindowSize <= memDistance:
-        memDistance = 1
+    maxMemDist = (aluWindowSize - 1) / 2
+    if memDistance > maxMemDist:
+	print "MemDistance too large, reduce to 50% aluWindowSize"
+	memDistance = maxMemDist
 
     kernel0 = genKernel(aluWindowSize, memDistance, "kernel0", 0)
     kernel0.dump()

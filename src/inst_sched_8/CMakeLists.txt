@@ -15,4 +15,5 @@ foreach (generator_file ${GENERATOR_FILES})
 	)
 endforeach (generator_file)
 
-add_custom_target(clean rm -rf *.ll *.ptx *.o *.asm)
+add_custom_target(clean rm -rf *.ll *.ptx *.o *.asm ${GENERATOR_FILES})
+add_custom_target(clean-all rm -rf *.txt *.ll *.ptx *.o *.asm ${GENERATOR_FILES})
