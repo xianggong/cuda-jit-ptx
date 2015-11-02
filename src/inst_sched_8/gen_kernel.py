@@ -39,42 +39,37 @@ class genKernel(object):
         src = ""
         aluSrc = ""
         if self.mode == 0:
-            src += self.genRead(kernelIdx, "A")
+            src = self.genRead(kernelIdx, "A")
             src += self.genALU(kernelIdx, "A")
             src += self.genRead(kernelIdx, "B")
             src += self.genALU(kernelIdx, "B")
             src += self.genRead(kernelIdx, "C")
             src += self.genALU(kernelIdx, "C")
         elif self.mode == 1:
-            src += self.genRead(kernelIdx, "A")
+            src = self.genRead(kernelIdx, "A")
             src += self.genRead(kernelIdx, "B")
             src += self.genRead(kernelIdx, "C")
             src += self.genALU(kernelIdx, "A")
             src += self.genALU(kernelIdx, "B")
             src += self.genALU(kernelIdx, "C")
         elif self.mode == 2:
-            src += self.genRead(kernelIdx, "A")
+            src = self.genRead(kernelIdx, "A")
             aluSrc = self.genALU(kernelIdx, "A")
             aluSrc += self.genALU(kernelIdx, "B")
             aluSrc += self.genALU(kernelIdx, "C")
             aluSrcLine = aluSrc.splitlines(True)
-            count = 1
+            count = 1 
             if kernelIdx == 1:
                 count += self.memDistance + 1
-            print aluSrc
             for line in aluSrcLine:
                 src += line
-                print str(count) + line 
-                if count % self.aluWindowSize == 0:
-                    print count
-                    if count / self.aluWindowSize == 1:
-                        src += "\n"
-                        src += self.genRead(kernelIdx, "B")
-                    if count / self.aluWindowSize == 2:
-                        src += "\n"
-                        src += self.genRead(kernelIdx, "C")
-		if "%" in str(line):
-	                count += 1
+                if "%" in str(line):
+                    if count % self.aluWindowSize == 0:
+                        if count / self.aluWindowSize == 1:
+                            src += self.genRead(kernelIdx, "B")
+                        if count / self.aluWindowSize == 2:
+                            src += self.genRead(kernelIdx, "C")
+	            count += 1
         else:
             print("Error mode")
         return src
@@ -99,9 +94,12 @@ class genKernel(object):
 if __name__ == "__main__":
     aluWindowSize = int(sys.argv[1])
     memDistance = int(sys.argv[2])
-    maxMemDist = (aluWindowSize - 1) / 2
+    maxMemDist = aluWindowSize / 2
+    if aluWindowSize < 2:
+	print "Error: aluWindowSize must >= 2"
+	exit(1)
     if memDistance > maxMemDist:
-	print "MemDistance too large, reduce to 50% aluWindowSize"
+	print "Error: memDistance too large, reduce to 50% aluWindowSize"
 	memDistance = maxMemDist
 
     kernel0 = genKernel(aluWindowSize, memDistance, "kernel0", 0)
