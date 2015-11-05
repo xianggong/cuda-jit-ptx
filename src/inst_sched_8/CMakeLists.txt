@@ -4,7 +4,7 @@ set (GENERATOR_FILES run.sh gen_kernel.py kernel.tpl kernelRead.tpl)
 
 # Generate host program
 add_executable(${EXE_NAME} ${SRC_FILES})
-target_link_libraries(${EXE_NAME} cuda)
+target_link_libraries(${EXE_NAME} cuda cudart)
 
 # Copy extra files 
 foreach (generator_file ${GENERATOR_FILES})

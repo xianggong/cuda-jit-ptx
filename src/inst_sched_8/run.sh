@@ -3,6 +3,7 @@
 # ------------------------- Global variables ------------------------
 # Profiling file name
 dataFileName=$(date +%H_%M_%S_%Y)
+profDataFileName=profData_${dataFileName}
 rawDataFileName=rawData_${dataFileName}
 
 # Executable file name
@@ -169,6 +170,68 @@ runKernel () {
 
   # Run and capture the raw profiling data
   namePostfix=${aluDist}_${memDist}
+  k0Raw=$(./${execName} $dataCount $scale $stride $blockSize kernel0_${namePostfix}.ptx 2>&1) 
+  k1Raw=$(./${execName} $dataCount $scale $stride $blockSize kernel1_${namePostfix}.ptx 2>&1) 
+  k2Raw=$(./${execName} $dataCount $scale $stride $blockSize kernel2_${namePostfix}.ptx 2>&1) 
+
+  # Check if any error
+  k0Error=$(echo "$k0Raw" | grep -io "error")
+  if [ -n "$k0Error" ]; then 
+    echo "$k0Raw"
+    return -1
+  fi
+  k1Error=$(echo "$k1Raw" | grep -io "error")
+  if [ -n "$k1Error" ]; then 
+    echo "$k1Raw"
+    return -1
+  fi
+  k2Error=$(echo "$k2Raw" | grep -io "error")
+  if [ -n "$k2Error" ]; then 
+    echo "$k2Raw"
+    return -1
+  fi
+
+  # Save raw data
+  local rawFile=${rawDataFileName}_${aluDist}_${memDist}
+  echo "$aluDist $memDist $dataCount $scale $stride" >> $rawFile
+  echo "$k0Raw" >> $rawFile 
+  echo "$k1Raw" >> $rawFile
+  echo "$k2Raw" >> $rawFile
+
+  # Some analysis
+  k0=$(echo "$k0Raw" | grep "ms" | awk '{print $6}' 2>&1)
+  k1=$(echo "$k1Raw" | grep "ms" | awk '{print $6}' 2>&1)
+  k2=$(echo "$k2Raw" | grep "ms" | awk '{print $6}' 2>&1)
+
+  # Calculate speedup
+  k0Value=$(echo "$k0" | grep -o "[0-9]*[\.]?[0-9]*")
+  k1Value=$(echo "$k1" | grep -o "[0-9]*[\.]?[0-9]*")
+  k2Value=$(echo "$k2" | grep -o "[0-9]*[\.]?[0-9]*")
+  speedup01=$(echo "scale=8; $k0Value/$k1Value*100" | bc)
+  speedup02=$(echo "scale=8; $k0Value/$k2Value*100" | bc)
+  echo "$aluDist $memDist $dataCount $scale $stride $k0 $k1 $k2 $speedup01% $speedup02%" >> \
+       ${profDataFileName}_${aluDist}_${memDist}
+}
+
+# Run kernel with nvprof
+runKernelNvprof () {
+  # Check number of args
+  if [ "$#" -ne 7 ]; then
+    echo ": $0 aluWindowSize memDistance arch dataCount scale stride blockSize"
+    exit 1
+  fi
+  
+  # Get params
+  aluDist=$1
+  memDist=$2
+  arch=$3
+  dataCount=$4
+  scale=$5
+  stride=$6
+  blockSize=$7
+
+  # Run and capture the raw profiling data
+  namePostfix=${aluDist}_${memDist}
   k0Raw=$(nvprof ./${execName} $dataCount $scale $stride $blockSize kernel0_${namePostfix}.ptx 2>&1) 
   k1Raw=$(nvprof ./${execName} $dataCount $scale $stride $blockSize kernel1_${namePostfix}.ptx 2>&1) 
   k2Raw=$(nvprof ./${execName} $dataCount $scale $stride $blockSize kernel2_${namePostfix}.ptx 2>&1) 
@@ -202,13 +265,18 @@ runKernel () {
   k2=$(echo "$k2Raw" | grep "  kernel" | awk '{print $2}' 2>&1)
 
   # Calculate speedup
-  k0Value=$(echo "$k0" | grep -o "[0-9]*\.[0-9]*")
-  k1Value=$(echo "$k1" | grep -o "[0-9]*\.[0-9]*")
-  k2Value=$(echo "$k2" | grep -o "[0-9]*\.[0-9]*")
-  speedup01=$(echo "scale=8; $k0Value/$k1Value*100" | bc)
-  speedup02=$(echo "scale=8; $k0Value/$k2Value*100" | bc)
-  echo "$aluDist $memDist $dataCount $scale $stride $k0 $k1 $k2 $speedup01% $speedup02%" >> \
-       ${aluDist}_${memDist}_$dataFileName
+  k0Value=$(echo "$k0" | egrep -o "[1-9][0-9]*\.?[0-9]*")
+  k1Value=$(echo "$k1" | egrep -o "[1-9][0-9]*\.?[0-9]*")
+  k2Value=$(echo "$k2" | egrep -o "[1-9][0-9]*\.?[0-9]*")
+  if [ -n "$k0Value"] && [ -n "$k1Value"] && [ -n "$k2Value"]
+    speedup01=$(echo "scale=8; $k0Value/$k1Value*100" | bc)
+    speedup02=$(echo "scale=8; $k0Value/$k2Value*100" | bc)
+    echo "$aluDist $memDist $dataCount $scale $stride $k0 $k1 $k2 $speedup01% $speedup02%" >> \
+         ${aluDist}_${memDist}_$dataFileName
+  else
+    echo "$aluDist $memDist $dataCount $scale $stride $k0 $k1 $k2 err% err%" >> \
+         ${aluDist}_${memDist}_$dataFileName
+  fi
 }
 
 # Generate, run and profile
@@ -227,7 +295,7 @@ run() {
         # Generate .o and .asm 
         out=$(genKernelVerifyFiles $aluDist $memDist $sm_arch)
         if [ "$out" == "-1" ]; then 
-          echo "Error generating .o and .asm"
+          echo "Error generating .o and .asm : aluDist = $aluDist, memDist = $memDist"
 	else
           for ((blockSize=32;blockSize<=1024;blockSize*=2))
           do
@@ -237,7 +305,7 @@ run() {
               dataCount=$(($blockSize*15))
               for((stride=1;stride<=$maxStride;stride+=1))
               do
-              runKernel $aluDist $memDist $sm_arch $dataCount $scale $stride $blockSize
+                runKernel $aluDist $memDist $sm_arch $dataCount $scale $stride $blockSize
               done
             done
           done
@@ -247,81 +315,7 @@ run() {
   done
 }
 
-# Generate files
-genFile () {
-  for((aluDist=1;aluDist<=$maxAluDistance;aluDist+=1))
-  do
-    memDistMaxLocal=$(expr $aluDist / 2)
-    memDistMax=$(["$maxMemDistance" -le "$memDistMaxLocal"] && echo "$maxMemDistance" || echo "$memDistMaxLocal")
-    for((memDist=1;memDist<=$memDistMax;memDist+=1))
-    do
-      # Generate ll kernels
-      python gen_kernel.py $aluDist $memDist
-      # Generate ptx kernels
-      genPtx sm_20 kernel0_${aluDist}_${memDist}
-
-#      llc -mcpu=sm_20 kernel0_${aluDist}_${memDist}.ll -o kernel0_${aluDist}_${memDist}.ptx
-      llc -mcpu=sm_20 kernel1_${aluDist}_${memDist}.ll -o kernel1_${aluDist}_${memDist}.ptx
-      llc -mcpu=sm_20 kernel2_${aluDist}_${memDist}.ll -o kernel2_${aluDist}_${memDist}.ptx
-      # Generate kernel objects
-      ptxas -arch=sm_20 kernel0_${aluDist}_${memDist}.ptx -o kernel0_${aluDist}_${memDist}.o
-      ptxas -arch=sm_20 kernel1_${aluDist}_${memDist}.ptx -o kernel1_${aluDist}_${memDist}.o
-      ptxas -arch=sm_20 kernel2_${aluDist}_${memDist}.ptx -o kernel2_${aluDist}_${memDist}.o
-      # Generate asm kernels
-      cuobjdump --dump-sass kernel0_${aluDist}_${memDist}.o > kernel0_${aluDist}_${memDist}.asm
-      cuobjdump --dump-sass kernel1_${aluDist}_${memDist}.o > kernel1_${aluDist}_${memDist}.asm
-      cuobjdump --dump-sass kernel2_${aluDist}_${memDist}.o > kernel2_${aluDist}_${memDist}.asm
-    done
-  done
-}
-
-# Profiling
-profile () {
-  aluDist=$1
-  memDist=$2
-  echo "profile $aluDist $memDist"
-  for ((blockSize=32;blockSize<=1024;blockSize*=2))
-  do
-    maxScale=$((1024*32760/${blockSize}))
-    echo "$scale" >> ${fileName}.txt
-#   echo "$maxScale"
-    for ((scale=1;scale<${maxScale};scale*=2))
-    do
-#     echo "scale = $scale"
-      dataCount=$(($blockSize*15))
-#     echo "dataCount = $dataCount"
-#     echo "blockSize = $blockSize"
-      for((offset=0;offset<=$maxOffset;offset+=1))
-      do
-        k0=$(nvprof ./${execName} $dataCount $scale $offset $blockSize kernel0_${aluDist}_${memDist}.ptx 2>&1 | grep '  kernel' | awk '{print $2}' 2>&1)
-        k1=$(nvprof ./${execName} $dataCount $scale $offset $blockSize kernel1_${aluDist}_${memDist}.ptx 2>&1 | grep '  kernel' | awk '{print $2}' 2>&1)
-        k2=$(nvprof ./${execName} $dataCount $scale $offset $blockSize kernel2_${aluDist}_${memDist}.ptx 2>&1 | grep '  kernel' | awk '{print $2}' 2>&1)
-#  echo "k0/1/2 $k0 $k1 $k2"
-    k0Value=$(echo $k0 | grep -o "[0-9]*\.[0-9]*")
-    k1Value=$(echo $k1 | grep -o "[0-9]*\.[0-9]*")
-    k2Value=$(echo $k2 | grep -o "[0-9]*\.[0-9]*")
-# echo "scale=10; $k0Value/$k1Value*100"
-# echo "scale=10; $k0Value/$k2Value*100"
-    speedup01=$(echo "scale=10; $k0Value/$k1Value*100" | bc)
-    speedup02=$(echo "scale=10; $k0Value/$k2Value*100" | bc)
-    echo "$aluDist $memDist $dataCount $scale $offset $k0 $k1 $k2 $speedup01% $speedup02%" >> ${fileName}.txt
-    done
-  done
-done
-}
-
 ####### Main
 
-#genKernelRunFiles 5 2 "sm_20"
-#genKernelVerifyFiles 5 2 "sm_20"
-#runKernel 5 2 "sm_20" 15360 1024 0 1024
-#genFile
 run
-#for((aluDist=1;aluDist<=$maxAluDistance;aluDist+=1))
-#do
-#  for((memDist=$aluDist;memDist<=$maxMemDistance;memDist+=1))
-#  do
-    #profile $aluDist $memDist
-#  done
-#done
 

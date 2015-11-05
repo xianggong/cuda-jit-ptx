@@ -2,6 +2,9 @@
 #include <fstream>
 #include <cassert>
 #include "cuda.h"
+#include "cuda_runtime_api.h"
+
+#define DEBUG 0
 
 inline void checkCudaErrors(CUresult err) { assert(err == CUDA_SUCCESS); }
 
@@ -91,6 +94,7 @@ int main(int argc, char** argv) {
   }
   hostDataCount[0] = dataCount;
   hostStride[0] = atoi(argv[3]);
+  int stride = hostStride[0];
 
   checkCudaErrors(
       cuMemcpyHtoD(devBufferA, &hostA[0], sizeof(float) * dataCount));
@@ -116,10 +120,19 @@ int main(int argc, char** argv) {
 
   std::cout << "Launching kernel\n";
 
+  // Kernel Event
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  // Profiling start
+  cudaEventRecord(start);
   // Kernel launch
   checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
                                  blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
                                  KernelParams, NULL));
+  // Profiling end 
+  cudaEventRecord(stop);
 
   // Retrieve device data
   checkCudaErrors(
@@ -127,6 +140,15 @@ int main(int argc, char** argv) {
   checkCudaErrors(
       cuMemcpyDtoH(&hostSMid[0], devBufferSMid, sizeof(int) * dataCount));
 
+  // Get timing info
+  cudaEventSynchronize(stop);
+  float milliSeconds = 0.0;
+  cudaEventElapsedTime(&milliSeconds, start, stop);
+
+  std::cout << dataCountOrig << " " << dataCountScale << " " << stride << " "
+            << gridSizeX << " " << blockSizeX << " " << milliSeconds << "ms\n";
+
+#if DEBUG
   std::cout << "Results:\n";
   std::cout << "SM " << hostSMid[0] << ":" << hostA[0] << " + " << hostB[0]
             << " = " << hostC[0] << "\n";
@@ -135,6 +157,7 @@ int main(int argc, char** argv) {
       std::cout << "SM " << hostSMid[i] << ":" << hostA[i] << " + " << hostB[i]
                 << " = " << hostC[i] << "\n";
   }
+#endif
 
   // Clean up after ourselves
   delete[] hostA;
