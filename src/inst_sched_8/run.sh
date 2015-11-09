@@ -265,9 +265,9 @@ runKernelNvprof () {
   k2=$(echo "$k2Raw" | grep "  kernel" | awk '{print $2}' 2>&1)
 
   # Calculate speedup
-  k0Value=$(echo "$k0" | egrep -o "[1-9][0-9]*\.?[0-9]*")
-  k1Value=$(echo "$k1" | egrep -o "[1-9][0-9]*\.?[0-9]*")
-  k2Value=$(echo "$k2" | egrep -o "[1-9][0-9]*\.?[0-9]*")
+  k0Value=$(echo "$k0" | egrep -o "[0-9]*\.?[0-9]*")
+  k1Value=$(echo "$k1" | egrep -o "[0-9]*\.?[0-9]*")
+  k2Value=$(echo "$k2" | egrep -o "[0-9]*\.?[0-9]*")
   if [ -n "$k0Value"] && [ -n "$k1Value"] && [ -n "$k2Value"]
     speedup01=$(echo "scale=8; $k0Value/$k1Value*100" | bc)
     speedup02=$(echo "scale=8; $k0Value/$k2Value*100" | bc)
